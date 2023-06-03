@@ -1,0 +1,8 @@
+[Unit]
+Description=Simple DDNS Timer
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+
+[Install]
+WantedBy=timers.target

@@ -1,6 +1,11 @@
+import CloudFlare
+import requests
 import os
 import sys
-import requests
+
+
+CF_API_TOKEN = os.getenv('CF_API_TOKEN')
+DOMAIN_NAME = os.getenv('DOMAIN_NAME')
 
 
 def get_my_ip():
@@ -8,45 +13,38 @@ def get_my_ip():
     return r.content.decode().strip()
 
 
-if __name__ == "__main__":
-    api_token = os.getenv('CF_API_TOKEN')
-    zone_name =  sys.argv[1] or os.getenv('CF_ZONE_NAME')
-    domain_name = sys.argv[2] or os.getenv('CF_DOMAIN_NAME')
+def check_and_update_cf_dc_record(dc_name, ipv4_address):
+    dns_prefix = '{}-dc'.format(dc_name)
+    full_dnsname = '{}.{}'.format(dns_prefix, DOMAIN_NAME)
 
-    res = requests.get('https://api.cloudflare.com/client/v4/zones?name={}'.format(zone_name), headers={
-        "Authorization": "Bearer {}".format(api_token),
+    cf = CloudFlare.CloudFlare(token=CF_API_TOKEN)
+    zones = cf.zones.get(params={'name': DOMAIN_NAME})
+
+    zone_id = zones[0]['id']
+
+    records = cf.zones.dns_records.get(zone_id, params={
+        'name': full_dnsname,
+        'match': 'all',
+        'type': 'A',
     })
-    print(res.content)
 
-    zones = res.json()["result"]
-    
-    zone_info = [x for x in zones if x['name'] == zone_name][0]
-    zone_id = zone_info['id']
+    dns_record = records[0]
+    if dns_record['content'] == ipv4_address:
+        print('IP matchs with {} ({}), skip patching.'.format(full_dnsname, ipv4_address))
+        return
 
-    res = requests.get('https://api.cloudflare.com/client/v4/zones/{}/dns_records'.format(zone_id), headers={
-        "Authorization": "Bearer {}".format(api_token),
+    cf.zones.dns_records.put(zone_id, dns_record['id'], data={
+        'name': full_dnsname,
+        'type': 'A',
+        'content': ipv4_address,
+        'proxied': dns_record['proxied']
     })
-    print(res.content)
+    print('Successfully updated {} from {} to {}'.format(full_dnsname, dns_record['content'], ipv4_address))
 
-    domains = res.json()["result"]
-    domain_info = [x for x in domains if x['name'] == domain_name][0]
-    domain_id = domain_info['id']
-    current_ip = domain_info['content']
 
+if __name__ == '__main__':
+    dc_name = sys.argv[1]
     client_ip = get_my_ip()
-    print("Client ip is: {}".format(get_my_ip()))
+    print("Client IP is: {}".format(get_my_ip()))
 
-    if current_ip == client_ip:
-        print('IP matchs with {} ({}), skip patching.'.format(domain_name, current_ip))
-        exit(0)
-
-    res = requests.patch('https://api.cloudflare.com/client/v4/zones/{}/dns_records/{}'.format(
-        zone_id, domain_id
-    ), headers={
-        "Authorization": "Bearer {}".format(api_token),
-    }, json={
-        'content': client_ip,
-    })
-    print(res.content)
-
-    print('Successfully updated {} from {} to {}'.format(domain_name, current_ip, client_ip))
+    check_and_update_cf_dc_record(dc_name, client_ip)
