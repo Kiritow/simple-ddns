@@ -6,10 +6,13 @@ import sys
 
 CF_API_TOKEN = os.getenv('CF_API_TOKEN')
 DOMAIN_NAME = os.getenv('DOMAIN_NAME')
+HTTP_PROXY = os.getenv('http_proxy')
 
 
 def get_my_ip():
-    r = requests.get('http://v4.ident.me')
+    r = requests.get('https://v4.ident.me', proxies={
+        'https': HTTP_PROXY,
+    } if HTTP_PROXY else None)
     return r.content.decode().strip()
 
 

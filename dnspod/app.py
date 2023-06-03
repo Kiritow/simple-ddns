@@ -8,6 +8,7 @@ import requests
 SEC_ID = os.getenv('SEC_ID')
 SEC_KEY = os.getenv('SEC_KEY')
 DOMAIN_NAME = os.getenv('DOMAIN_NAME')
+HTTP_PROXY = os.getenv('http_proxy')
 
 
 cred = credential.Credential(SEC_ID, SEC_KEY)
@@ -29,7 +30,9 @@ def get_dnspod_dc_record(dc_name):
 
 
 def get_my_ip():
-    r = requests.get('http://v4.ident.me')
+    r = requests.get('https://v4.ident.me'proxies={
+        'https': HTTPS_PROXY,
+    } if HTTPS_PROXY else None)
     return r.content.decode().strip()
 
 
