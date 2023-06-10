@@ -30,9 +30,9 @@ def get_dnspod_dc_record(dc_name):
 
 
 def get_my_ip():
-    r = requests.get('https://v4.ident.me'proxies={
-        'https': HTTPS_PROXY,
-    } if HTTPS_PROXY else None)
+    r = requests.get('https://v4.ident.me', proxies={
+        'https': HTTP_PROXY,
+    } if HTTP_PROXY else None)
     return r.content.decode().strip()
 
 
