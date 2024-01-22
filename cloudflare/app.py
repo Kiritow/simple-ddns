@@ -18,10 +18,10 @@ def get_my_ip():
     return r.content.decode().strip()
 
 
-def report_status(dc_name, ip):
+def report_status(dc_name, new_ip, old_ip):
     try:
         r = requests.post(REPORT_LINK, json={
-            "dc": dc_name, "ip": ip
+            "dc": dc_name, "new": new_ip, "old": old_ip,
         }, timeout=5)
         print(r.content)
     except Exception:
@@ -46,7 +46,7 @@ def check_and_update_cf_dc_record(dc_name, ipv4_address):
     dns_record = records[0]
     if dns_record['content'] == ipv4_address:
         print('IP matchs with {} ({}), skip patching.'.format(full_dnsname, ipv4_address))
-        return
+        return ipv4_address, ipv4_address
 
     cf.zones.dns_records.put(zone_id, dns_record['id'], data={
         'name': full_dnsname,
@@ -55,9 +55,8 @@ def check_and_update_cf_dc_record(dc_name, ipv4_address):
         'proxied': dns_record['proxied']
     })
     print('Successfully updated {} from {} to {}'.format(full_dnsname, dns_record['content'], ipv4_address))
-    
-    if REPORT_LINK:
-        report_status(dc_name, ipv4_address)
+
+    return ipv4_address, dns_record['content']
 
 
 if __name__ == '__main__':
@@ -65,4 +64,7 @@ if __name__ == '__main__':
     client_ip = get_my_ip()
     print("Client IP is: {}".format(get_my_ip()))
 
-    check_and_update_cf_dc_record(dc_name, client_ip)
+    new_ip, old_ip = check_and_update_cf_dc_record(dc_name, client_ip)
+    
+    if REPORT_LINK:
+        report_status(dc_name, new_ip, old_ip)
