@@ -2,11 +2,13 @@ import CloudFlare
 import requests
 import os
 import sys
+import traceback
 
 
 CF_API_TOKEN = os.getenv('CF_API_TOKEN')
 DOMAIN_NAME = os.getenv('DOMAIN_NAME')
 HTTP_PROXY = os.getenv('http_proxy')
+REPORT_LINK = os.getenv('REPORT_LINK')
 
 
 def get_my_ip():
@@ -14,6 +16,16 @@ def get_my_ip():
         'https': HTTP_PROXY,
     } if HTTP_PROXY else None)
     return r.content.decode().strip()
+
+
+def report_status(dc_name, ip):
+    try:
+        r = requests.post(REPORT_LINK, json={
+            "dc": dc_name, "ip": ip
+        }, timeout=5)
+        print(r.content)
+    except Exception:
+        print(traceback.format_exc())
 
 
 def check_and_update_cf_dc_record(dc_name, ipv4_address):
@@ -43,6 +55,9 @@ def check_and_update_cf_dc_record(dc_name, ipv4_address):
         'proxied': dns_record['proxied']
     })
     print('Successfully updated {} from {} to {}'.format(full_dnsname, dns_record['content'], ipv4_address))
+    
+    if REPORT_LINK:
+        report_status(dc_name, ipv4_address)
 
 
 if __name__ == '__main__':
