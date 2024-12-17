@@ -7,14 +7,14 @@ import traceback
 
 CF_API_TOKEN = os.getenv('CF_API_TOKEN')
 DOMAIN_NAME = os.getenv('DOMAIN_NAME')
-HTTP_PROXY = os.getenv('http_proxy')
+CHECK_HTTP_PROXY = os.getenv('CHECK_HTTP_PROXY')
 REPORT_LINK = os.getenv('REPORT_LINK')
 
 
 def get_my_ip():
     r = requests.get('https://v4.ident.me', proxies={
-        'https': HTTP_PROXY,
-    } if HTTP_PROXY else None)
+        'https': CHECK_HTTP_PROXY,
+    } if CHECK_HTTP_PROXY else None)
     return r.content.decode().strip()
 
 
